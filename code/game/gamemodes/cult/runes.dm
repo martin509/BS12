@@ -1,6 +1,7 @@
 var/list/sacrificed = list()
 
 /obj/effect/rune
+
 /////////////////////////////////////////FIRST RUNE
 	proc
 		teleport(var/key)
@@ -12,7 +13,7 @@ var/list/sacrificed = list()
 			for(var/obj/effect/rune/R in world)
 				if(R == src)
 					continue
-				if(R.word1 == cultwords["travel"] && R.word2 == cultwords["self"] && R.word3 == key && R.z != 2)
+				if(R.word1 == cultwords["travel"] && R.word2 == cultwords["self"] && R.word3 == key && isPlayerLevel(R.z))
 					index++
 					allrunesloc.len = index
 					allrunesloc[index] = R.loc
@@ -98,50 +99,82 @@ var/list/sacrificed = list()
 /////////////////////////////////////////THIRD RUNE
 
 		convert()
+			var/mob/living/carbon/target = null
 			for(var/mob/living/carbon/M in src.loc)
-				if(iscultist(M))
-					continue
-				if(M.stat==2)
-					continue
-				usr.say("Mah[pick("'","`")]weyh pleggh at e'ntrath!")
+				if(!iscultist(M) && M.stat < DEAD && !(M in converting))
+					target = M
+					break
+			
+			if(!target) //didn't find any new targets
+				if(!converting.len)
+					fizzle()
+				else
+					usr << "<span class='danger'>You sense that the power of the dark one is already working away at them.</span>"
+				return
 				
-				if (M.species && (M.species.flags & NO_PAIN))
-					M.visible_message("\red The markings below [M] glow a bloody red.")
-				else
-					M.visible_message("\red [M] writhes in pain as the markings below \him glow a bloody red.", \
-					"\red AAAAAAHHHH!", \
-					"\red You hear an anguished scream.")
-				if(is_convertable_to_cult(M.mind) && !jobban_isbanned(M, "cultist"))//putting jobban check here because is_convertable uses mind as argument
-
-					// Mostly for the benefit of those who resist, but it makes sense for even those who join to have some.. effect.
-					M.take_overall_damage(0, 10)
-
-					var/choice = alert(M,"Do you want to join the cult?","Submit to Nar'Sie","Resist","Submit")
-					if(choice == "Submit")
-						ticker.mode.add_cultist(M.mind)
-						M.mind.special_role = "Cultist"
-						M << "<font color=\"purple\"><b><i>Your blood pulses. Your head throbs. The world goes red. All at once you are aware of a horrible, horrible truth. The veil of reality has been ripped away and in the festering wound left behind something sinister takes root.</b></i></font>"
-						M << "<font color=\"purple\"><b><i>Assist your new compatriots in their dark dealings. Their goal is yours, and yours is theirs. You serve the Dark One above all else. Bring It back.</b></i></font>"
-						return 1
-
-					else if(choice == "Resist")
-
-						M.take_overall_damage(0, rand(5, 10)) // You dirty resister cannot handle the damage to your mind. Easily.
-						// Resist messages go!
-						var/BurnLoss = M.getFireLoss()
-						if (BurnLoss < 25) 			M << "<font color=\"red\"><b>Your blood boils as you force yourself to resist the corruption invading every corner of your mind."
-						else if (BurnLoss < 45) 	M << "<font color=\"red\"><b>Your blood boils and your body burns as the corruption further forces itself into your body and mind."
-						else if (BurnLoss < 75) 	M << "<font color=\"red\"><b>You begin to hallucinate images of a dark and incomprehensible being and your entire body feels like its engulfed in flame as your mental defenses crumble."
-						else if (BurnLoss < 100) 	M << "<font color=\"red\"><b>Your mind turns to ash as the burning flames engulf your very soul and images of Nar'Sie begin to bombard the last remnants of mental resistance."
-						else 						M << "<font color=\"red\"><b>Your entire broken soul and being is engulfed in corruption and flames as your mind shatters away into nothing."
-						return 0
-				else
-					M << "<font color=\"purple\"><b><i>Your blood pulses. Your head throbs. The world goes red. All at once you are aware of a horrible, horrible truth. The veil of reality has been ripped away and in the festering wound left behind something sinister takes root.</b></i></font>"
-					M << "<font color=\"red\"><b>And you were able to force it out of your mind. You now know the truth, there's something horrible out there, stop it and its minions at all costs.</b></font>"
+			usr.say("Mah[pick("'","`")]weyh pleggh at e'ntrath!")
+			
+			converting |= target
+			var/list/waiting_for_input = list(target = 0) //need to box this up in order to be able to reset it again from inside spawn, apparently
+			var/initial_message = 0
+			while(target in converting)
+				if(target.loc != src.loc || target.stat == DEAD)
+					converting -= target
+					if(target.getFireLoss() < 100)
+						target.hallucination = min(target.hallucination, 500)
 					return 0
-			return fizzle()
+				
+				target.take_overall_damage(0, rand(5, 20)) // You dirty resister cannot handle the damage to your mind. Easily. - even cultists who accept right away should experience some effects
+				// Resist messages go!
+				if(initial_message) //don't do this stuff right away, only if they resist or hesitate.
+					switch(target.getFireLoss())
+						if(0 to 25)
+							target << "<span class='danger'>Your blood boils as you force yourself to resist the corruption invading every corner of your mind.</span>"
+						if(25 to 45)
+							target << "<span class='danger'>Your blood boils and your body burns as the corruption further forces itself into your body and mind.</span>"
+						if(45 to 75)
+							target << "<span class='danger'>You begin to hallucinate images of a dark and incomprehensible being and your entire body feels like its engulfed in flame as your mental defenses crumble.</span>"
+							target.apply_effect(rand(1,10), STUTTER)
+						if(75 to 100)
+							target << "<span class='cult'>Your mind turns to ash as the burning flames engulf your very soul and images of an unspeakable horror begin to bombard the last remnants of mental resistance.</span>"
+							//broken mind - 5000 may seem like a lot I wanted the effect to really stand out for maxiumum losing-your-mind-spooky
+							//hallucination is reduced when the step off as well, provided they haven't hit the last stage...
+							target.hallucination += 5000 
+							target.apply_effect(10, STUTTER)
+							target.adjustBrainLoss(1)
+						if(100 to INFINITY)
+							target << "<span class='cult'>Your entire broken soul and being is engulfed in corruption and flames as your mind shatters away into nothing.</span>"
+							target.hallucination += 5000
+							target.apply_effect(15, STUTTER)
+							target.adjustBrainLoss(rand(1,5))
 
+				initial_message = 1
+				if (target.species && (target.species.flags & NO_PAIN))
+					target.visible_message("<span class='warning'>The markings below [target] glow a bloody red.</span>")
+				else
+					target.visible_message("<span class='warning'>[target] writhes in pain as the markings below \him glow a bloody red.</span>", "<span class='danger'>AAAAAAHHHH!</span>", "<span class='warning'>You hear an anguished scream.</span>")
 
+				if(!waiting_for_input[target]) //so we don't spam them with dialogs if they hesitate
+					waiting_for_input[target] = 1
+					
+					if(!is_convertable_to_cult(target.mind) || jobban_isbanned(target, "cultist"))//putting jobban check here because is_convertable uses mind as argument
+						//waiting_for_input ensures this is only shown once, so they basically auto-resist from here on out. They still need to find a way to get off the freaking rune if they don't want to burn to death, though.
+						target << "<span class='cult'>Your blood pulses. Your head throbs. The world goes red. All at once you are aware of a horrible, horrible truth. The veil of reality has been ripped away and in the festering wound left behind something sinister takes root.</span>"
+						target << "<span class='danger'>And you were able to force it out of your mind. You now know the truth, there's something horrible out there, stop it and its minions at all costs.</span>" 
+						
+					else spawn()
+						var/choice = alert(target,"Do you want to join the cult?","Submit to Nar'Sie","Resist","Submit")
+						waiting_for_input[target] = 0
+						if(choice == "Submit") //choosing 'Resist' does nothing of course.
+							ticker.mode.add_cultist(target.mind)
+							target.mind.special_role = "Cultist"
+							target << "<span class='cult'>Your blood pulses. Your head throbs. The world goes red. All at once you are aware of a horrible, horrible truth. The veil of reality has been ripped away and in the festering wound left behind something sinister takes root.</span>"
+							target << "<span class='cult'>Assist your new compatriots in their dark dealings. Their goal is yours, and yours is theirs. You serve the Dark One above all else. Bring It back.</span>"
+							converting -= target
+							target.hallucination = 0 //sudden clarity
+				
+				sleep(100) //proc once every 10 seconds
+			return 1
 
 /////////////////////////////////////////FOURTH RUNE
 
@@ -355,7 +388,7 @@ var/list/sacrificed = list()
 				usr.visible_message("\red [usr]'s eyes glow blue as \he freezes in place, absolutely motionless.", \
 				"\red The shadow that is your spirit separates itself from your body. You are now in the realm beyond. While this is a great sight, being here strains your mind and body. Hurry...", \
 				"\red You hear only complete silence for a moment.")
-				usr.ghostize(1)
+				announce_ghost_joinleave(usr.ghostize(1), 1, "You feel that they had to use some [pick("dark", "black", "blood", "forgotten", "forbidden")] magic to [pick("invade","disturb","disrupt","infest","taint","spoil","blight")] this place!")
 				L.ajourn = 1
 				while(L)
 					if(L.key)
@@ -399,8 +432,6 @@ var/list/sacrificed = list()
 					D.real_name = copytext(P.info, findtext(P.info,">")+1, findtext(P.info,"<",2) )
 					chose_name = 1
 					break
-			if(!chose_name)
-				D.real_name = "[pick(first_names_male)] [pick(last_names)]"
 			D.universal_speak = 1
 			D.status_flags &= ~GODMODE
 			D.s_tone = 35
@@ -415,10 +446,14 @@ var/list/sacrificed = list()
 				ticker.mode:add_cultist(D.mind)
 			else
 				ticker.mode.cult+=D.mind
-			D.mind.assigned_role = pick("Anguished", "Blasphemous", "Corrupt", "Depraved", "Disturbed", "Exacerbated", "Foul", "Hateful", "Inexorable", "Implacable", "Impure", "Pained", "Profane", "Profligate", "Resentful", "Restless", "Tormented", "Unclean", "Unforgiving", "Vengeful", "Vindictive", "Wicked", "Wronged")
-			D.mind.assigned_role += " "
-			D.mind.assigned_role += pick("Apparition", "Aptrgangr", "Draugr", "Dybbuk", "Ghast", "Ghost", "Gjenganger", "Haint", "Phantom", "Phantasm", "Poltergeist", "Revenant", "Shade", "Soul", "Spectre", "Spirit", "Spook", "Visitant", "Wraith")
+
+			D.mind.assigned_role = "Manifest Ghost"
 			D.mind.special_role = "Cultist"
+			if(!chose_name)
+				D.real_name = pick("Anguished", "Blasphemous", "Corrupt", "Cruel", "Depraved", "Despicable", "Disturbed", "Exacerbated", "Foul", "Hateful", "Inexorable", "Implacable", "Impure", "Malevolent", "Malignant", "Malicious", "Pained", "Profane", "Profligate", "Relentless", "Resentful", "Restless", "Spiteful", "Tormented", "Unclean", "Unforgiving", "Vengeful", "Vindictive", "Wicked", "Wronged")
+				D.real_name += " "
+				D.real_name += pick("Apparition", "Aptrgangr", "Dis", "Draugr", "Dybbuk", "Eidolon", "Fetch", "Fylgja", "Ghast", "Ghost", "Gjenganger", "Haint", "Phantom", "Phantasm", "Poltergeist", "Revenant", "Shade", "Shadow", "Soul", "Spectre", "Spirit", "Spook", "Visitant", "Wraith")
+
 			D << "<font color=\"purple\"><b><i>Your blood pulses. Your head throbs. The world goes red. All at once you are aware of a horrible, horrible truth. The veil of reality has been ripped away and in the festering wound left behind something sinister takes root.</b></i></font>"
 			D << "<font color=\"purple\"><b><i>Assist your new compatriots in their dark dealings. Their goal is yours, and yours is theirs. You serve the Dark One above all else. Bring It back.</b></i></font>"
 
