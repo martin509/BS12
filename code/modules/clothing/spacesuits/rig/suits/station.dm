@@ -11,8 +11,8 @@
 
 	allowed = list(/obj/item/device/flashlight,/obj/item/weapon/tank,/obj/item/device/suit_cooling_unit,/obj/item/weapon/storage/bag/ore,/obj/item/device/t_scanner,/obj/item/weapon/pickaxe, /obj/item/weapon/rcd)
 
-	req_access = null
-	req_one_access = null
+	req_access = list()
+	req_one_access = list()
 
 	initial_modules = list(
 		/obj/item/rig_module/device/plasmacutter,
@@ -71,6 +71,26 @@
 		/obj/item/rig_module/device/anomaly_scanner
 		)
 
+/obj/item/weapon/rig/hazmat/epson
+
+	name = "ECS control module"
+	suit_type = "ECS suit"
+	desc = "This light, comfortable, and durable suit is designed to be the final word in handling anomalous materials. 'Property of Louis Epson' is stenciled across one of the arm plates."
+	icon_state = "epson_rig"
+	armor = list(melee = 40, bullet = 20, laser = 50, energy = 15, bomb = 50, bio = 100, rad = 100)
+	slowdown = 1
+	offline_slowdown = 2
+	offline_vision_restriction = 0
+
+	req_access = list()
+	req_one_access = list()
+
+	initial_modules = list(
+		/obj/item/rig_module/device/anomaly_scanner,
+		/obj/item/rig_module/ai_container
+		)
+
+
 /obj/item/weapon/rig/medical
 
 	name = "rescue suit control module"
@@ -83,8 +103,8 @@
 
 	allowed = list(/obj/item/device/flashlight,/obj/item/weapon/tank,/obj/item/device/suit_cooling_unit,/obj/item/weapon/storage/firstaid,/obj/item/device/healthanalyzer,/obj/item/stack/medical,/obj/item/roller )
 
-	req_access = null
-	req_one_access = null
+	req_access = list()
+	req_one_access = list()
 
 	initial_modules = list(
 		/obj/item/rig_module/chem_dispenser/injector,
@@ -105,6 +125,6 @@
 
 	allowed = list(/obj/item/weapon/gun,/obj/item/device/flashlight,/obj/item/weapon/tank,/obj/item/device/suit_cooling_unit,/obj/item/weapon/melee/baton)
 
-	req_access = null
-	req_one_access = null
+	req_access = list()
+	req_one_access = list()
 
