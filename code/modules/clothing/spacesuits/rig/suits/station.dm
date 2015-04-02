@@ -73,23 +73,21 @@
 
 /obj/item/weapon/rig/hazmat/epson
 
-	name = "ECS control module"
-	suit_type = "ECS suit"
-	desc = "This light, comfortable, and durable suit is designed to be the final word in handling anomalous materials. 'Property of Louis Epson' is stenciled across one of the arm plates."
-	icon_state = "epson_rig"
-	armor = list(melee = 40, bullet = 20, laser = 50, energy = 15, bomb = 50, bio = 100, rad = 100)
-	slowdown = 1
-	offline_slowdown = 2
-	offline_vision_restriction = 0
+   name = "ECS control module"
+   suit_type = "ECS suit"
+   desc = "The Environmental Containment Suit, model A-4, is designed to be the final word in handling anomalous materials: it's light, comfortable, and most importantly, protects against more kinds of radiation than most scientists believe exist. 'Property of Louis Epson' is stenciled on one of the arm plates."
+   icon_state = "epson_rig"
+   armor = list(melee = 40, bullet = 15, laser = 40, energy = 5, bomb = 40, bio = 100, rad = 100)
+   slowdown = 1
+   offline_slowdown = 3
+   offline_vision_restriction = 0
 
-	req_access = list()
-	req_one_access = list()
+   req_access = list(access_xenoarch)
 
-	initial_modules = list(
-		/obj/item/rig_module/device/anomaly_scanner,
-		/obj/item/rig_module/ai_container
-		)
-
+   initial_modules = list(
+      /obj/item/rig_module/device/anomaly_scanner,
+      /obj/item/rig_module/ai_container
+      )
 
 /obj/item/weapon/rig/medical
 
